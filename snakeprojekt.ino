@@ -7,11 +7,8 @@
 
 #define NOTE_E5  659
 
-//todo: bitmaps?
-//extern byte snek[];
-//extern byte snake[];
-
-const byte snek[] PROGMEM = {
+// todo: move to extern?
+const byte snakeLogo[] PROGMEM = {
         B00000000,B00000000,B00000000,B00111111,B11100000,B00000000,B00000000,B00000000,B00111111,B11110000,B00000000,
         B00000000,B00000000,B00000011,B11111111,B11111111,B00000000,B00000000,B00000011,B11111111,B11111100,B00000000,
         B00000000,B00000000,B00001111,B10000000,B00000001,B11000000,B00000000,B00001111,B10000000,B00001111,B11100000,
@@ -60,7 +57,7 @@ bool m_bPress[2]; // holds buttons states
 int snakeDirection = 1; // 0 - up, 1 - right, - 2 down, 3 - left
 int x[maxLength], y[maxLength]; // holds snake positions, eats memory
 int snakeLength;
-int xegg, yegg;
+int foodX, foodY;
 unsigned long gameSpeed = startGameSpeed;
 int score;
 
@@ -94,8 +91,8 @@ void initialise() {
     snakeDirection = 1;
     x[maxLength] = {0};
     y[maxLength] = {0};
-    xegg = random(0, mapWidth);
-    yegg = random(0, mapHeight);
+    foodX = random(0, mapWidth);
+    foodY = random(0, mapHeight);
 
     for (byte i = 0; i <= snakeLength; i++)      // init snake
     {
@@ -123,9 +120,9 @@ void printScore() {
 void setup() {
     Serial.begin(9600);
     display.begin();
-    display.setContrast(40);
+    display.setContrast(45);
     display.clearDisplay();
-    display.drawBitmap(0, 0, snek, 84, 26, BLACK);
+    display.drawBitmap(0, 0, snakeLogo, 84, 26, BLACK);
     display.setTextSize(2);
     display.setTextColor(BLACK);
     display.setCursor(10, 28);
@@ -180,7 +177,7 @@ void movesnake()  //Ruchy
 
         if (checkCollision())
             gameOver();
-        checkegg();
+        checkFood();
 
         if (nextX <= 0) { nextX = mapWidth + nextX; }
         if (nextX >= mapWidth) { nextX = nextX - mapWidth; }
@@ -207,18 +204,18 @@ boolean checkCollision() {
     return false;
 }
 
-void checkegg() {
-    if (x[0] == xegg && y[0] == yegg) {
+void checkFood() {
+    if (x[0] == foodX && y[0] == foodY) {
         score++;
         snakeLength++;
         tone(buzzer, NOTE_E5, 150);
         delay(150);
         printScore();
         if (gameSpeed >= maxGameSpeed) { gameSpeed -= gameSpeedIncrease; }
-        display.fillRoundRect(xegg * thickness, yegg * thickness, thickness, thickness, 3, WHITE); // remove eaten egg
+        display.fillRoundRect(foodX * thickness, foodY * thickness, thickness, thickness, 3, WHITE); // remove eaten food
         display.display();
-        xegg = random(0, mapWidth);
-        yegg = random(0, mapHeight);
+        foodX = random(0, mapWidth);
+        foodY = random(0, mapHeight);
 
     }
 }
@@ -237,7 +234,7 @@ void readControls() {
 
 void redraw() {
     //display.clearDisplay();     // no need to clear display every tick
-    display.fillRoundRect(xegg * thickness, yegg * thickness, thickness, thickness, 3, BLACK);
+    display.fillRoundRect(foodX * thickness, foodY * thickness, thickness, thickness, 3, BLACK);
     for (byte i = 0; i < snakeLength; i++) {
         display.drawRoundRect(x[i] * thickness, y[i] * thickness, thickness, thickness, 1, BLACK);
     }
