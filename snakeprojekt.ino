@@ -43,7 +43,7 @@ int buttonLeft = A1;
 const int buzzer = 10;
 
 //game config
-const int thickness = 6;
+const int thickness = 5;
 const int startLength = 4;
 const unsigned long startGameSpeed = 240;
 const int maxGameSpeed = 80;
@@ -53,6 +53,8 @@ const int mapWidth = DISPLAY_WIDTH / thickness;
 const int mapHeight = DISPLAY_HEIGHT / thickness;
 const int maxLength = mapWidth * mapHeight;
 bool m_bPress[2]; // holds buttons states
+
+bool hasMoved = false;
 
 int snakeDirection = 1; // 0 - up, 1 - right, - 2 down, 3 - left
 int x[maxLength], y[maxLength]; // holds snake positions, eats memory
@@ -193,6 +195,7 @@ void movesnake()  //Ruchy
             nextY = oldY;
         }
         redraw();
+        hasMoved = false;
     }
 }
 
@@ -221,14 +224,17 @@ void checkFood() {
 }
 
 void readControls() {
+  if (hasMoved) return;
     if (WasPressed(buttonRight, 0)) {
         snakeDirection++;
         snakeDirection %= 4;
+        hasMoved = true;
     }
     if (WasPressed(buttonLeft, 1)) {
         snakeDirection--;
         if (snakeDirection == -1)
             snakeDirection = 3;
+        hasMoved = true;
     }
 }
 
