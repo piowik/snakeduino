@@ -7,7 +7,6 @@
 
 #define NOTE_E5  659
 
-// todo: move to extern?
 const byte snakeLogo[] PROGMEM = {
         B00000000,B00000000,B00000000,B00111111,B11100000,B00000000,B00000000,B00000000,B00111111,B11110000,B00000000,
         B00000000,B00000000,B00000011,B11111111,B11111111,B00000000,B00000000,B00000011,B11111111,B11111100,B00000000,
@@ -38,23 +37,26 @@ const byte snakeLogo[] PROGMEM = {
 };
 
 // pin config
-int buttonRight = A0;
-int buttonLeft = A1;
-const int buzzer = 10;
+Adafruit_PCD8544 display = Adafruit_PCD8544(4, 3, 2, 1, 0);  // SCLK, DIN, DC, CS, RST
+const int buzzer = 5;
+const int SW_pin = 7; // digital pin connected to switch output
+const int X_pin = 0; // analog pin connected to X output
+const int Y_pin = 1; // analog pin connected to Y output
+
+const int threshold = 100; // joystick threshold
 
 //game config
 const int thickness = 5;
 const int startLength = 4;
-const unsigned long startGameSpeed = 240;
+const unsigned long startGameSpeed = 330;
 const int maxGameSpeed = 80;
 const unsigned long gameSpeedIncrease = 10;
 
 const int mapWidth = DISPLAY_WIDTH / thickness;
 const int mapHeight = DISPLAY_HEIGHT / thickness;
 const int maxLength = mapWidth * mapHeight;
-bool m_bPress[2]; // holds buttons states
 
-bool hasMoved = false;
+bool hasStarted = false;
 
 int snakeDirection = 1; // 0 - up, 1 - right, - 2 down, 3 - left
 int x[maxLength], y[maxLength]; // holds snake positions, eats memory
@@ -63,36 +65,11 @@ int foodX, foodY;
 unsigned long gameSpeed = startGameSpeed;
 int score;
 
-Adafruit_PCD8544 display = Adafruit_PCD8544(7, 6, 5, 4, 3);  // SCLK, DIN, DC, CS, RST
-
-bool WasPressed(byte pin, byte index, int threshold = 512) {
-    int val = analogRead(pin);
-    if (val > threshold) {
-        Serial.println(val);
-        Serial.println(index);
-        if (m_bPress[index]) {
-            m_bPress[index] = false;
-        }
-        return false;
-    }
-    if (!m_bPress[index]) {
-        m_bPress[index] = true;
-        return true;
-    }
-    // but was before
-    return false;
-}
-
 void initialise() {
-    for (byte i = 0; i < 2; i++) {
-        m_bPress[i] = false;
-    }
     score = 0;
     gameSpeed = startGameSpeed;
     snakeLength = startLength;
     snakeDirection = 1;
-    x[maxLength] = {0};
-    y[maxLength] = {0};
     foodX = random(0, mapWidth);
     foodY = random(0, mapHeight);
 
@@ -101,12 +78,13 @@ void initialise() {
         x[i] = startLength + 1 - i;
         y[i] = 3;
     }
-
 }
 
 void startGame() {
+    hasStarted = false;
     display.clearDisplay();
     initialise();
+    hasStarted = true;
     printScore();
     redraw();
 }
@@ -120,7 +98,9 @@ void printScore() {
 }
 
 void setup() {
-    Serial.begin(9600);
+  
+    pinMode(SW_pin, INPUT);
+    digitalWrite(SW_pin, HIGH);
     display.begin();
     display.setContrast(45);
     display.clearDisplay();
@@ -131,6 +111,18 @@ void setup() {
     display.print("SNEJK");
     display.display();
     delay(3000);
+    display.clearDisplay();
+    display.setCursor(10, 4);
+    display.print("SNEJK");
+    display.setTextSize(1);
+    display.setCursor(0,20);
+    display.print(">Press button<");
+    display.display();
+    while(digitalRead(SW_pin) == 1) {
+      delay(10);
+    }
+    
+    tone(buzzer, NOTE_E5, 150);
     startGame();
 }
 
@@ -142,22 +134,31 @@ void gameOver() {
     display.clearDisplay();
     display.setTextColor(BLACK);
     display.setTextSize(1);
-    display.setCursor(14, 10);
+    display.setCursor(14, 8);
     display.print("Game Over");
-    display.setCursor(14, 22);
+    display.setCursor(14, 18);
     display.print("Score: ");
     display.print(score);
+    display.setCursor(0, 32);
+    display.print(">Press button<");
     display.display();
-    delay(3000);
+    //delay(3000);
+    while(digitalRead(SW_pin) == 1) {
+      delay(10);
+    }
+    
+    tone(buzzer, NOTE_E5, 150);
     startGame();
 }
 
 void movesnake()  //Ruchy
 {
+    if (!hasStarted) return;
     readControls();
     if (millis() % gameSpeed == 0) {
-        int nextX;
-        int nextY;
+
+        int nextX = 0;
+        int nextY = 0;
         switch (snakeDirection) {
             case 0: // up
                 nextX = x[0];
@@ -176,9 +177,12 @@ void movesnake()  //Ruchy
                 nextY = y[0];
                 break;
         }
-
-        if (checkCollision())
+        
+        if (checkCollision()) {
             gameOver();
+            return;
+        }
+        
         checkFood();
 
         if (nextX <= 0) { nextX = mapWidth + nextX; }
@@ -195,7 +199,6 @@ void movesnake()  //Ruchy
             nextY = oldY;
         }
         redraw();
-        hasMoved = false;
     }
 }
 
@@ -219,23 +222,20 @@ void checkFood() {
         display.display();
         foodX = random(0, mapWidth);
         foodY = random(0, mapHeight);
-
     }
 }
 
 void readControls() {
-  if (hasMoved) return;
-    if (WasPressed(buttonRight, 0)) {
-        snakeDirection++;
-        snakeDirection %= 4;
-        hasMoved = true;
-    }
-    if (WasPressed(buttonLeft, 1)) {
-        snakeDirection--;
-        if (snakeDirection == -1)
-            snakeDirection = 3;
-        hasMoved = true;
-    }
+  int posY = analogRead(Y_pin);
+  int posX = analogRead(X_pin);
+  if (posY > 1023-threshold and snakeDirection != 2) // gora
+    snakeDirection = 0;
+  else if (posY < threshold and snakeDirection != 0) // dol
+    snakeDirection = 2;
+  else if (posX > 1023-threshold and snakeDirection != 3) // prawo
+    snakeDirection = 1;
+  else if (posX < threshold and snakeDirection != 1) // lewo
+    snakeDirection = 3;
 }
 
 void redraw() {
