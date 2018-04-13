@@ -12,8 +12,8 @@ const byte snakeLogo[] PROGMEM = {
         B00000000,B00000000,B00000011,B11111111,B11111111,B00000000,B00000000,B00000011,B11111111,B11111100,B00000000,
         B00000000,B00000000,B00001111,B10000000,B00000001,B11000000,B00000000,B00001111,B10000000,B00001111,B11100000,
         B00000000,B00000000,B00001100,B00000000,B00000000,B11100000,B00000000,B00111100,B00000000,B00001111,B11000000,
-        B00000000,B00000000,B00011000,B00000111,B11000000,B01110000,B00000000,B01111000,B00011111,B11111000,B00000000,
-        B00000000,B00000000,B00011000,B00000111,B11000000,B01110000,B00000000,B01111000,B00011111,B11111000,B00000000,
+        B00000000,B00000000,B00011000,B00000000,B00000000,B01110000,B00000000,B01111000,B00011111,B11111000,B00000000,
+        B00000000,B00000000,B00011000,B00000000,B00000000,B01110000,B00000000,B01111000,B00011111,B11111000,B00000000,
         B00000000,B00000000,B00011000,B00000111,B11000000,B01110000,B00000000,B01111000,B00011111,B11111000,B00000000,
         B00000000,B00000000,B00110000,B01111111,B11110000,B00011100,B00000000,B01110000,B01111111,B11100000,B00000000,
         B00000000,B00000000,B00110000,B11111000,B00011110,B00011100,B00000000,B11000000,B11100000,B00000000,B00000000,
@@ -39,9 +39,10 @@ const byte snakeLogo[] PROGMEM = {
 // pin config
 Adafruit_PCD8544 display = Adafruit_PCD8544(4, 3, 2, 1, 0);  // SCLK, DIN, DC, CS, RST
 const int buzzer = 5;
-const int SW_pin = 7; // digital pin connected to switch output
-const int X_pin = 0; // analog pin connected to X output
-const int Y_pin = 1; // analog pin connected to Y output
+// joystick
+const int SW_pin = 7; // digital pin
+const int X_pin = 0; // analog pin
+const int Y_pin = 1; // analog pin
 
 const int threshold = 100; // joystick threshold
 
@@ -59,7 +60,8 @@ const int maxLength = mapWidth * mapHeight;
 bool hasStarted = false;
 
 int snakeDirection = 1; // 0 - up, 1 - right, - 2 down, 3 - left
-int x[maxLength], y[maxLength]; // holds snake positions, eats memory
+int lastDirection = 0;
+int x[maxLength], y[maxLength]; // holds snake positions
 int snakeLength;
 int foodX, foodY;
 unsigned long gameSpeed = startGameSpeed;
@@ -177,6 +179,7 @@ void movesnake()  //Ruchy
                 nextY = y[0];
                 break;
         }
+        lastDirection = snakeDirection;
         
         if (checkCollision()) {
             gameOver();
@@ -214,11 +217,12 @@ void checkFood() {
     if (x[0] == foodX && y[0] == foodY) {
         score++;
         snakeLength++;
-        tone(buzzer, NOTE_E5, 150);
-        delay(150);
+        tone(buzzer, NOTE_E5, 50);
+        delay(50);
+         
         printScore();
         if (gameSpeed >= maxGameSpeed) { gameSpeed -= gameSpeedIncrease; }
-        display.fillRoundRect(foodX * thickness, foodY * thickness, thickness, thickness, 3, WHITE); // remove eaten food
+        display.fillRoundRect(foodX * thickness, foodY * thickness, thickness, thickness, 3, WHITE); // remove food
         display.display();
         foodX = random(0, mapWidth);
         foodY = random(0, mapHeight);
@@ -228,13 +232,13 @@ void checkFood() {
 void readControls() {
   int posY = analogRead(Y_pin);
   int posX = analogRead(X_pin);
-  if (posY > 1023-threshold and snakeDirection != 2) // gora
+  if (posY > 1023-threshold and lastDirection != 2) // up
     snakeDirection = 0;
-  else if (posY < threshold and snakeDirection != 0) // dol
+  else if (posY < threshold and lastDirection != 0) // down
     snakeDirection = 2;
-  else if (posX > 1023-threshold and snakeDirection != 3) // prawo
+  else if (posX > 1023-threshold and lastDirection != 3) // right
     snakeDirection = 1;
-  else if (posX < threshold and snakeDirection != 1) // lewo
+  else if (posX < threshold and lastDirection != 1) // left
     snakeDirection = 3;
 }
 
