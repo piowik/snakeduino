@@ -1,4 +1,5 @@
 # snakeduino
+![schema](schemat.png)<br>
 Nokia 5110 display
 
 <table>
@@ -12,9 +13,9 @@ Nokia 5110 display
 <tr><td>LIGHT</td><td>GND</td></tr>
 <tr><td>GND</td><td>GND</td></tr>
 </table>
-Buzzer pin 5
-Joystick SW pin 7
-Joystick analog inputs A0, A1
+Buzzer pin 5<br>
+Joystick SW pin 7<br>
+Joystick analog inputs A0, A1<br>
 <hr>
 Required libraries:<br>
 https://github.com/adafruit/Adafruit-PCD8544-Nokia-5110-LCD-library<br>
